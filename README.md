@@ -23,17 +23,6 @@ To build the emulator, navigate to the project directory and run:
 ```sh
 make
 ```
-### Running the Emulator
-
-After building the emulator, you can run it with the following command:
-
-```sh
-./um rpn.asm
-
-```
-
-Replace program.asm with the path to your assembly language program file.
-
 #### Assembly Language Format
 The assembly language supported by this emulator follows a simple format. Here's an example of a program:
 
