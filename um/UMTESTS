@@ -1,0 +1,12 @@
+add.um
+conditional-move.um
+division.um
+halt.um
+inputoutput.um
+loadprogram.um
+map_segment.um
+map.um
+mult.um
+nand.um
+segmented-loadandmap.um
+segmented-storeandunmap.um

@@ -1,0 +1,140 @@
+Authors:
+
+        Luke Randolph (lrando1) and Sammy Kao (skao01)
+
+
+Significant Departures from Design:
+
+        We didn't have any-- just like our design said, we included four
+        modules: a main module (um.c), a memmory module (memory.h), a register
+        module (cpu.h), and an instruction handler module (parse_instr.h).
+        These modules interacted pretty similar to how we detailed in the
+        design doc.
+
+Architecture:
+
+        Modules: 
+        
+        um.c - This file defines the main function for our UM that calls the 
+        loop/driver function that runs through all instructions from the 
+        file passed in
+
+        memory.h - This module handles managing memory segments and loading
+        instructions into memory from a file. Memory was stored as a struct
+        with a sequence of segment structs, a sequence of IDs for unmapped 
+        segments, and the program counter.
+
+
+        parse_instr.h - This module handles parsing through uint32_t
+        instructions to figure out what each one wants to accomplish
+
+        cpu.h - This module defines the instruction functions that can be 
+        called by the UM program and handles the creation of the registers
+
+        How they interact: 
+
+        Main (um.c):
+        Memory_new(), makes a new Memory instance
+        CPU_new(), makes a new CPU instance
+        load_instructions(memory, fp) --> puts instructions from file into 
+        memory
+        handle_instruction(memory, cpu) --> driver function that calls/
+        handles instructions, interacting with all modules
+        Memory_free(&memory) --> frees the Memory instance
+        CPU_free(&cpu) --> frees the CPU instance
+
+        Memory:
+        Does not call to other interfaces with its code
+
+        Parse_Instr: 
+        handle_instruction(Memory memory, CPU cpu) --> driver function that 
+        calls/handles instructions called in main, interacts with memory and 
+        CPU
+        unpack_instruction(Memory memory, CPU cpu, uint32_t word) --> takes
+        instruction from memory and calls corresponding function in CPU.c
+
+        CPU:
+        14 individual instruction functions -->
+        All interacts with CPU instance for registers, some interact with 
+        memory depending on what they try to accomplish
+
+        
+
+UMTESTS:
+
+        add.um: Early test that simply checks if the add instruction works
+        with three register parameters, no output.
+
+        conditional-move.um: Tests the conditional move function. Loads 10 in
+        register 1, 48 in register 2, and 1 in register 3. Moves r2 into r1
+        dependent on r3, and ouputs the value in r1.
+
+        division.um: Tests the division function. Divides 150 by 2, and
+        outputs the result. 75 in ASCII = K.
+
+        halt.um: Tests just the halt operation, tests memory initialization.
+
+        inputoutput.um: tests input and output functions by inputting the
+        file we give it as input and then outputting the contents of it.
+
+        loadprogram.um: loads program 0 with counter 3, which moves the
+        counter along and puts 97 into register 2, which is output. 97 in
+        ASCII is a.
+
+        map_segment.um: Tests the map and unmap function. Loads 1 in
+        register 1, 2 in register 2, and 2 in register 3. Moves r2 into r1
+        dependent on r3, and ouputs the value in r1. Calls map on the three
+        registers, making a new segment1 with two words. Then loads the
+        value 1 into register 3, and unmaps segment 1 by passing register 3
+        in as the third parameter. No output.
+
+        map.um: Tests map, segmented load, and segmented store. Maps a new
+        segment of size 2, then stores 54 in the first index of the new 
+        segment, then loads the word stored in the first index of the new 
+        segment into the third register and outputs it. 54 in ASCII = 6.
+
+        mult.um: tests multiplication operation. Loads 7 in one register,
+        8 in another, multiplies them, outputs the value. 56 in ASCII = 8.
+
+        nand.um: tests nand function. Loads 160 into registers two and three,
+        then calls nand on it, storing the value in register 1 and outputting
+        it. The nand of 160 is the _ char.
+
+        segmented-loadandmap.um: Tests mapping and segload and segstore more 
+        thoroughly by mapping two segments and storing a word in the
+        second mapped segment. We then load back the value and output it.
+        Output of 97 should be a.
+        
+        segmented-storeandunmap.um: Tests mapping and segload and segstore  
+        more thoroughly by mapping a new segment of length 2, and storing
+        and then loading the value from the second index of the new segment.
+        Output of 112 should be p.
+
+        (loadval and output are tested throughout many of these functions.)
+
+
+How long it takes our UM to execute 50 million instructions:
+
+        Midmark has 120440 chars which encode 120440 / 4 = 30110 instructions.
+        Midmark runs in 0.003 seconds. Multiplying that out to 50 million
+        instructions, we can extrapolate that it would take our UM 
+        approximately 0.003 x 1660.5778811 = 4.98173364331 seconds, or around
+        5 seconds.
+
+Collaboration:
+
+        We recieved help from TAs via office hours.
+
+
+Parts Implemented:
+
+        We have implemented all parts of the program correctly.
+
+
+Time Spent:
+
+        Analyzing the problems posed: 8 hours.
+
+        Writing the Design: 8 hours
+        
+        Solving the problems after analysis: 15 hours.

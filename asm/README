@@ -1,0 +1,55 @@
+Authors:
+        Jordan Pittignano (Jpitti01), Sammy Kao (Skao01)
+
+
+Help Recieved:
+        CS40 TAs via office hours and piazza
+
+
+Implemented: 
+        Everything has beeen implemented correctly
+x
+
+Departures From Calling Convetions:
+        We implemented the normal calling conventions with r1 being return 
+        addresses, that jumps to other functions. We also restore r3 and 
+        r4 values when needed, as they are caller save functions.
+
+
+Print Module Implementation:
+        We implemented the print module by having a recursive function get 
+        each number on stack, then another recursive function print each 
+        digit and we handled negative numbers and 0 case seperately (the 
+        largest neg number already worked at this point).
+
+
+Value Stack Represenation: 
+        We treated a valuestack and our callstack as one, allocating 40k 
+        bytes of space on one stack, and then was able to use that for both
+        by being very clean and diligent with pushing and popping registers.
+
+
+Sections:
+        .section init --> contains setup code, code for seting up the stack, 
+                          initialization of r0 to 0, the code to initialize 
+                          the jump tables, and code to call main.
+    
+        .section text --> contains procedure/function definitions, so this
+                          section is where most of the code is run.
+
+        .section rodata --> contains our data for our jumptable allocation.
+
+        .section data --> contains our data for other preallocated stack 
+                          and global variables.
+
+
+Hours Spent Analyzing: 
+        5 hours
+
+
+Hours Spent Writing:
+        24 hours
+
+
+Hours Spent Debugging:
+        10 hours

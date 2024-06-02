@@ -1,0 +1,130 @@
+// printd.ums
+// Jordan Pittignano (jpitti01) and Sammy Kao (skao01)
+// 4/30/24
+// asmcoding
+// Purpose:
+    // Module for printing Universal Machine words in decimal
+// Calling Conventions:
+    // We stuck to the standard calling conventions 
+    // r0 is 0
+    // r1 is return address and register result
+    // r2 is stack pointer
+    // r3 and r4 are nonvolatiles
+    // r5 is volatile
+    // r6 and r7 are temporaries and volatile
+
+
+
+// Initializes temporary registers and register 0
+.section init
+    .temps r6, r7
+    .zero r0
+
+
+
+// Code for printing 
+.section text
+    // Prints the number of values on the stack using help from recursion
+    // and then returns to getting input
+    print:
+        pop stack r2
+
+        push r1 on stack r2
+        m[r0][state]:= 0    // In waiting state
+        r3 := m[r0][stack_length]    // Get the number of nums
+
+        goto recursive_print linking r1    // Going to recursive helper
+
+        pop r1 off stack r2
+        goto waiting_loop
+    
+
+    // Recursive function for printing the number of values given
+    // in r3
+    recursive_print:
+        if (r3 == 0) goto r1 
+        push r1 on stack r2
+
+        output ">>> "
+        goto print_number linking r1    // Jumping to printing whole number
+        output '\n'
+
+        r3 := r3 - 1    // Decrement
+        pop r1 off stack r2
+        goto recursive_print    // Recursive call
+    
+
+    // Printing one singular number, which we do top to bottom since
+    // we pushed two registers (need to offset)
+    print_number:
+        r5:= m[r0][stack_length] + 2    // Getting stack length plus 2
+        r4:= r5 - r3
+        r4:= r2 + r4
+        r4:= m[r0][r4]
+
+        if (r4 == 0) goto print_zero    // Zero edge case
+
+        r5:= print_negative    // Handles negative
+        r6:= 0
+        if (r4 <s r6) goto r5
+
+        push r1 on stack r2
+        push r3 on stack r2
+        r3:= 0
+        goto recursive_digit_print linking r1    // Recurse to print digit
+        pop r3 off stack r2
+        pop r1 off stack r2
+
+        goto r1
+    
+
+    // Recursive helper for printing a digit in a number
+    recursive_digit_print:
+        r5:= r4 mod 10    // Getting proper place value by using mod 10
+        push r5 on stack r2
+
+        r3:= r3 + 1
+        r4:= r4 / 10
+
+        if (r4 == 0) goto print_digits    // Have printed all the digits
+
+        goto recursive_digit_print    // Recurse to get next digit
+
+
+    // Recursive function for printing the digits of a number
+    print_digits:
+
+        if (r3 == 0) goto r1    // Get digit to print
+        pop r5 off stack r2
+
+        r5:= r5 + 48    // Converting the integer to ascii
+        output r5
+
+        r3 := r3 - 1    // Going to the next digit by going to next register
+
+        goto print_digits
+
+
+    // Handles printing out zero by solely outputing '0'
+    print_zero:
+        output '0'
+        goto r1
+
+
+    // Prints a negative number in r4, using the same recursion as a for 
+    // a positive number, sets r3 to 0 for digit printing function
+    print_negative:
+        output "-"    // Minus sign
+
+        r4:= r4 - 1    // Step 1 to turn number negative
+        r4:= ~r4    // Step 2 to turn number negative
+        push r1 on stack r2
+        push r3 on stack r2
+
+        r3:= 0
+        goto recursive_digit_print linking r1    // Print digits of neg number
+
+        pop r3 off stack r2
+        pop r1 off stack r2
+
+        goto r1

@@ -1,0 +1,81 @@
+// callmain.ums
+// Jordan Pittignano (jpitti01) and Sammy Kao (skao01)
+// 4/30/24
+// asmcoding
+// Purpose:
+    // Contains the main function, waiting loop and cleanup of the stack.
+    // This module navigates through the logistical parts of our program.
+// Calling Conventions:
+    // We stuck to the standard calling conventions 
+    // r0 is 0
+    // r1 is return address and register result
+    // r2 is stack pointer
+    // r3 and r4 are nonvolatiles
+    // r5 is volatile
+    // r6 and r7 are temporaries and volatile
+
+
+
+// Initializes temporary registers and register 0 and jumps to main
+.section init
+    .temps r5, r6, r7
+    .zero r0
+
+    // Goes to label 'main' for the program and then stops once it is finished
+    callmain:
+        goto main linking r1
+        halt
+
+
+
+// As mentioned, main, function for how we handle input, and cleanup
+.section text
+    // Main function that contains our input loop for the calculator. This
+    // function also cleans up the stack once we are finished.
+    main:
+        push r1 on stack r2        
+        
+        goto set_jumptable_values linking r1
+
+        m[r0][state]:= 0    // Global variable for state              
+        m[r0][stack_length]:= 0    // Global variable for length of stack
+
+        push r3 on stack r2 
+        push r4 on stack r2
+        goto waiting_loop linking r1    // Jump to input loop
+        pop stack r2    // Pop off EOF char
+        goto clean_stack linking r1    // Jump to cleanup
+        
+        pop r4 off stack r2
+        pop r3 off stack r2
+        pop r1 off stack r2
+        
+        goto r1
+
+
+    // Creates a loop that handles input given to r3 and executes the proper
+    // instruction based on what is provided using the jump table
+    waiting_loop:
+        r3:= input()
+        r4:= -1
+
+        push r3 on stack r2    // Push value onto stack for other funcs to use
+
+        if (r3 == r4) goto r1    // If EOF we end file
+
+        r4:= jumptable + r3
+        goto m[r0][r4]
+    
+
+    // Recursively cleans up all of the values on the stack
+    clean_stack:
+        r3:= m[r0][stack_length]
+
+        if (r3 == 0) goto r1    // If the stack is empty, finish
+
+        pop stack r2 
+        r3:= m[r0][stack_length]    // Get current stack length
+        r3:= r3 - 1    // Decrement
+        m[r0][stack_length]:= r3    // Set new stack length
+
+        goto clean_stack

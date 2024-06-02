@@ -1,0 +1,575 @@
+// calc40.ums
+// Jordan Pitignano (jpitti01) and Sammy Kao (skao01)
+// 4/30/24
+// asmcoding
+// Purpose:
+    // Contains calculator-related data structures and functions.
+// Calling Conventions:
+    // We stuck to the standard calling conventions 
+    // r0 is 0
+    // r1 is return address and register result
+    // r2 is stack pointer
+    // r3 and r4 are nonvolatiles
+    // r5 is volatile
+    // r6 and r7 are temporaries and volatile
+
+
+
+// Initializes temporary registers and register 0
+.section init
+    .temps r6, r7
+    .zero r0
+
+
+
+// Sets up certain values like the jumptable and the proper inputs
+// for calculator digits and operations. Also contains the functions for
+// all calculator operations.
+.section text
+    // Recursively sets the jumptable values by setting value of r5 in 
+    // decimal, then returning to r1 when end pointer (r3) meets start 
+    // pointer (r4)
+    set_jumptable_values:
+        push r1 on stack r2
+
+        r3:= 255    // End of jumptable (since 256 ascii values)
+        r4:= jumptable    // Start of jumptable
+        goto set_value_errors linking r1
+
+        goto set_operation_inputs linking r1    // Set calc functions
+        goto set_digit_inputs linking r1    // Set digits
+
+        pop r1 off stack r2
+        goto r1
+
+
+    // Sets value errors for jumptable
+    set_value_errors:
+        r5:= r4 + r3
+
+        m[r0][r5]:= value_error    // Store val err func at calculated address
+        
+        if (r3 == 0) goto r1 
+        r3:= r3 - 1
+        
+        goto set_value_errors
+    
+
+    // Handles receiving bad input and then returns back to the input loop
+    value_error:
+        output "Invalid Input\n"
+        pop stack r2
+        m[r0][state]:= 0    // Set state to waiting
+
+        goto waiting_loop
+
+
+    // Sets the calculator functions by giving each of the applicable ascii
+    // values that are calculator operations the proper corresponding
+    // function name in the program, then returns back to current place
+    // in program
+    set_operation_inputs:
+        m[r0][jumptable + ' ']:= set_waiting
+        m[r0][jumptable + '\n']:= print
+        m[r0][jumptable + '+']:= add
+        m[r0][jumptable + '-']:= subtract
+        m[r0][jumptable + '*']:= multiply
+        m[r0][jumptable + '/']:= divide
+        m[r0][jumptable + '|']:= bitwiseor
+        m[r0][jumptable + '&']:= bitwiseand
+        m[r0][jumptable + 'c']:= changesign
+        m[r0][jumptable + '~']:= bitwisecompl
+        m[r0][jumptable + 's']:= swap
+        m[r0][jumptable + 'd']:= duplicate
+        m[r0][jumptable + 'p']:= popdiscard
+        m[r0][jumptable + 'z']:= remove_all
+
+        goto r1
+
+
+    // Set each digit 0-1 to the function that recives diggit input
+    set_digit_inputs:
+        m[r0][jumptable + '0']:= digit_input
+        m[r0][jumptable + '1']:= digit_input
+        m[r0][jumptable + '2']:= digit_input
+        m[r0][jumptable + '3']:= digit_input
+        m[r0][jumptable + '4']:= digit_input
+        m[r0][jumptable + '5']:= digit_input
+        m[r0][jumptable + '6']:= digit_input
+        m[r0][jumptable + '7']:= digit_input
+        m[r0][jumptable + '8']:= digit_input
+        m[r0][jumptable + '9']:= digit_input
+        
+        goto r1
+
+
+    // Reads in a digit and handles it properly based on r3, which tell us 
+    // whether we are in the waiting or entering state
+    digit_input:
+        r3:= m[r0][state]    // Get state
+
+        if (r3 == 0) goto new_number    // If waiting, its a new number
+
+        goto existing_number    // Otherwise, it's an existing number
+
+
+    // Creates stores latest num we recieved in r3 and converts
+    // to integer from ascii, pushes back r3 on stack
+    new_number:
+        m[r0][state]:= 1    // Change state to esntering
+
+        pop r3 off stack r2
+        r3:= r3 - 48    // Convert ASCII to integer
+        push r3 on stack r2
+
+        r3:= m[r0][stack_length] + 1
+        m[r0][stack_length]:= r3    // Update stack length
+        goto waiting_loop    // Go back to receiving input
+
+
+    // Handles an existing number, which is in r3, by appending a digit 
+    // to it that was input and then returns back to receiving input
+    existing_number:
+        pop r3 off stack r2
+        pop r4 off stack r2
+        r3:= r3 - 48    // Convert ASCII to integer
+        r4:= r4 * 10
+        r3:= r3 + r4     // Append the digits
+        push r3 on stack r2
+        goto waiting_loop    // Go back to receiving input
+
+
+    // Changes the state of the program back to waiting, which is in r0
+    set_waiting:
+        pop stack r2
+        m[r0][state]:= 0
+        goto waiting_loop
+
+
+    // Performs add operation by adding numbers in registers r3 and r4 and 
+    // puts the result in r5. Then returns back to receiving input
+    add:
+        pop stack r2
+        m[r0][state]:= 0    // Make state waiting
+
+        push r1 on stack r2
+        goto check_len_2 linking r1 using r5
+        pop r1 off stack r2
+
+        r3:= m[r0][r2]    // Remove two values
+        r4:= m[r0][r2 + 1]    
+        r5:= r3 + r4    // Add the two values
+
+        pop stack r2
+        pop stack r2
+        push r5 on stack r2
+
+        r4:= m[r0][stack_length]
+        r4:= r4 - 1
+        m[r0][stack_length]:= r4
+
+        goto waiting_loop
+
+
+    // Performs subtraction by subtracting the number in r3 from what is in
+    // r4 and puts the result in r5. Then returns back to receiving input
+    subtract:
+        pop stack r2
+        m[r0][state]:= 0
+
+        push r1 on stack r2
+        goto check_len_2 linking r1 using r5 // Make sure two vals
+        pop r1 off stack r2
+
+        r3:= m[r0][r2]
+        r4:= m[r0][r2 + 1]
+        r5:= r4 - r3    // Perform subtraction 
+
+        pop stack r2
+        pop stack r2
+        push r5 on stack r2
+
+        r4:= m[r0][stack_length]
+        r4:= r4 - 1    // Decrement stack size
+        m[r0][stack_length]:= r4    // Update stack size
+
+        goto waiting_loop
+
+
+    // Performs multiplication by multiplying what is in r3 and r4 and 
+    // puts the result in r5. Then returns back to receiving input
+    multiply:
+        pop stack r2
+        m[r0][state]:= 0
+
+        push r1 on stack r2
+        goto check_len_2 linking r1 using r5    // Make sure two vals
+        pop r1 off stack r2
+
+        r3:= m[r0][r2]
+        r4:= m[r0][r2 + 1]
+        r5:= r4 * r3    // Perform multiplication
+        pop stack r2
+        pop stack r2
+        push r5 on stack r2
+
+        r4:= m[r0][stack_length]
+        r4:= r4 - 1    // Decrement stack size
+        m[r0][stack_length]:= r4    // Update stack size
+
+        goto waiting_loop
+
+
+    // Performs division by dividing what is in r4 by r3 and putting the
+    // result in r5, taking into account special cases for diving with 
+    // negative numbers and trying to divide by zero
+    divide:
+        pop stack r2
+        m[r0][state]:= 0    // State to waiting
+
+        push r1 on stack r2
+        goto check_len_2 linking r1 using r5    // Check 2 vals at least
+        pop r1 off stack r2
+
+        r3:= m[r0][r2]    // Get one of top two values off stack
+        r4:= m[r0][r2 + 1]    // Get second of top two values off stack
+        pop stack r2
+        pop stack r2
+        
+        push r1 on stack r2
+        goto check_dividing_by_neg linking r1 using r5 
+        pop r1 off stack r2
+
+        push r1 on stack r2
+        goto check_neg_being_divided linking r1 using r5
+        pop r1 off stack r2
+
+        if (r3 == 0) goto zero_division
+
+        r4:= r4 / r3    // Divide and put on stack
+
+        push r4 on stack r2
+
+        r4:= m[r0][stack_length]
+        r4:= r4 - 1
+        m[r0][stack_length]:= r4    // Update stack size
+
+        goto waiting_loop
+
+
+    // Checks if r3 is a negative number and goes to r1 if not
+    check_dividing_by_neg:
+        push r4 on stack r2
+
+        r4:= 0
+        r5:= check_numerator
+
+        if (r3 <s r4) goto r5
+
+        pop r4 off stack r2
+        goto r1
+
+
+    // Check if r4 is a positive number and then does negative over negative
+    // division if not. Returns to receiving input once finished.
+    check_numerator:
+        pop r4 off stack r2
+        push r3 on stack r2
+        r3:= 0
+        r5:= neg_div
+
+        if (r4 >s r3) goto r5    // If num not neg, go to pos over neg division
+
+        pop r3 off stack r2
+        pop r1 off stack r2
+
+        r3:= -r3
+        r4:= -r4
+        r4:= r4 / r3    // Neg over Neg division
+
+        push r4 on stack r2
+
+        r3:= m[r0][stack_length]
+        r3:= r3 - 1
+        m[r0][stack_length]:= r3    // Update stack size
+
+        goto waiting_loop
+
+
+    // Turns r3 negative and then divides r4 by r3, negating the the result
+    // and putting it in r4. Then returns back to receiving input
+    neg_div:
+        pop r3 off stack r2
+        r3:= -r3
+        r4:= r4 / r3
+        r4:= -r4
+
+        pop r1 off stack r2
+        push r4 on stack r2
+
+        r3:= m[r0][stack_length]
+        r3:= r3 - 1
+        m[r0][stack_length]:= r3    // Update stack size
+        goto waiting_loop
+
+
+    // Checks to see if r4 is negative and returns to r1 if not.
+    check_neg_being_divided:
+        push r3 on stack r2
+
+        r3:= 0
+        r5:= check_denom
+        if (r4 <s r3) goto r5
+
+        pop r3 off stack r2
+        goto r1
+
+
+    // Checks to see if r3 is positive and returns to r1 if not. If it is,
+    // performs proper division by jumping to function in r5.
+    check_denom:
+        pop r3 off stack r2
+        push r4 on stack r2
+        
+        r4:= 0
+        r5:= neg_div_2
+        if (r3 >s r4) goto r5
+
+        pop r4 off stack r2
+        goto r1
+
+
+    // Turns r4 negative, divides r4 by r3 and then turns that result 
+    // negative, putting it back in r4. Returns back to receiving input.
+    neg_div_2:
+        pop r4 off stack r2
+        r4:= -r4
+        r4:= r4 / r3
+        r4:= -r4
+        pop r1 off stack r2
+
+        push r4 on stack r2
+
+        r3:= m[r0][stack_length]
+        r3:= r3 - 1
+        m[r0][stack_length]:= r3
+        goto waiting_loop
+
+
+    // Performs bitwise OR operation on what is in r4 and r3, putting the
+    // result in r5 and returning back to receiving input
+    bitwiseor:
+        pop stack r2
+        m[r0][state]:= 0    // Go to waiting state
+
+        push r1 on stack r2
+        goto check_len_2 linking r1 using r5 
+        pop r1 off stack r2
+
+        r3:= m[r0][r2]
+        r4:= m[r0][r2 + 1]
+
+        r5:= r4 | r3    // Perform bitwise or
+
+        pop stack r2
+        pop stack r2
+        push r5 on stack r2
+
+        r4:= m[r0][stack_length]
+        r4:= r4 - 1
+        m[r0][stack_length]:= r4     // Update stack size
+
+        goto waiting_loop
+
+
+    // Performs bitwise AND operation on what is in r4 and r3, putting the
+    // result in r5 and returning back to receiving input
+    bitwiseand:
+        pop stack r2
+        m[r0][state]:= 0    // Go to waiting state
+
+        push r1 on stack r2
+        goto check_len_2 linking r1 using r5 
+        pop r1 off stack r2
+
+        r3:= m[r0][r2]
+        r4:= m[r0][r2 + 1]
+
+        r5:= r4 & r3    // Performing bitwise and
+
+        pop stack r2
+        pop stack r2
+        push r5 on stack r2
+
+        r4:= m[r0][stack_length]
+        r4:= r4 - 1
+        m[r0][stack_length]:= r4    // Update stack size
+
+        goto waiting_loop
+    
+
+    // Performs bitwise compliment operation on what is in r3 and then 
+    // returns back to receiving input
+    bitwisecompl:
+        pop stack r2
+        m[r0][state]:= 0    // Go to waiting state
+
+        push r1 on stack r2
+        goto check_len_1 linking r1 using r5    // Check at leat 1 num
+        pop r1 off stack r2
+
+        r3:= m[r0][r2]
+
+        r3:= ~r3    // Get compliment
+
+        pop stack r2
+        push r3 on stack r2
+
+        goto waiting_loop
+
+
+    // Swaps the two values on the top of the stack (r3 and r4) and then
+    // goes back to receiving input
+    swap:
+        pop stack r2
+        m[r0][state]:= 0    // Go to waiting state
+
+        push r1 on stack r2
+        goto check_len_2 linking r1 using r5 
+        pop r1 off stack r2
+
+        r3:= m[r0][r2]    // Putting what is in r3 onto top of stack
+        r4:= m[r0][r2 + 1]    // Putting what is in r4 one place up on stack
+
+        pop stack r2
+        pop stack r2
+        push r3 on stack r2
+        push r4 on stack r2  
+
+        goto waiting_loop
+
+
+    // Duplicates the number on top of the stack, which is r3 and then
+    // returns back to receiving input
+    duplicate:
+        pop stack r2
+        m[r0][state]:= 0    // Change state to waiting
+
+        push r1 on stack r2
+        goto check_len_1 linking r1 using r5
+        pop r1 off stack r2
+
+        r3:= m[r0][r2]    // Duplicate item
+        push r3 on stack r2 
+
+        r4:= m[r0][stack_length] + 1    // Increment stack size by 1
+        m[r0][stack_length]:= r4  
+
+        goto waiting_loop
+
+
+    // Pops a value off a stack pointed to by r2 and then 
+    // returns back to receiving input
+    popdiscard:
+        pop stack r2
+        m[r0][state]:= 0    // Change state to waiting
+
+        push r1 on stack r2
+        goto check_len_1 linking r1 using r5    // Check for one num 
+        pop r1 off stack r2
+
+        pop stack r2
+
+        r4:= m[r0][stack_length]
+        r4:= r4 - 1    // Decrement stack size by 1
+        m[r0][stack_length]:= r4 
+
+        goto waiting_loop
+
+
+    // Changes the sign of a specified number on the stack, r3 and then
+    // returns back to receiving input
+    changesign:
+        pop stack r2
+        m[r0][state]:= 0 
+
+        push r1 on stack r2
+        goto check_len_1 linking r1 using r5 
+        pop r1 off stack r2
+
+        r3:= m[r0][r2] 
+        r3:= -r3    
+        pop stack r2
+        push r3 on stack r2
+
+        goto waiting_loop
+
+
+    // Removes all values from the stack by recursively looping through
+    remove_all:
+        m[r0][state]:= 0    // Change state to waiting
+        pop stack r2
+
+        r3:= m[r0][stack_length] 
+        m[r0][stack_length]:= 0
+
+        goto remove_all_loop
+    
+
+    // Recursive helper for removing the number of values specified
+    // in r3, returning to recieving input once they
+    // are all removed.
+    remove_all_loop:
+        if (r3 == 0) goto waiting_loop    // If all off, go back to get input
+
+        pop stack r2 
+        r3:= r3 - 1 
+
+        goto remove_all_loop
+        
+    
+    // Checks that there are at least 2 numbers on the stack (r3 and r4) and
+    // then returns back to the current place in the program
+    check_len_2:
+        r4 := m[r0][stack_length]
+        r3 := 2
+        r5:= stack_error_2    // Outputting proper error message
+        if (r4 <s r3) goto r5
+
+        goto r1
+
+
+    // Checks that there is at least 1 number on the stack (r3) and then
+    // returns back to the current place in the program
+    check_len_1:
+        r4 := m[r0][stack_length]
+        r3 := 1
+        r5:= stack_error_1    // Outputting proper error message
+        if (r4 <s r3) goto r5
+
+        goto r1
+
+
+    // Handles outputting error message if there are not two items on the 
+    // stack and then returns to receiving input
+    stack_error_2:
+        output "Stack underflow---expected at least 2 elements\n"
+        pop r1 off stack r2
+        goto waiting_loop
+
+
+    // Handles outputting error message if there is not one item on the 
+    // stack and then returns to receiving input
+    stack_error_1:
+        output "Stack underflow---expected at least 1 element\n"
+        pop r1 off stack r2
+        goto waiting_loop
+
+
+    // Handles if there is an attempt to divide by 0 and returns to 
+    // receiving input
+    zero_division:
+        output "Division by zero\n"
+        push r4 on stack r2
+        push r3 on stack r2
+        goto waiting_loop
