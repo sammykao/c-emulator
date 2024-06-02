@@ -23,3 +23,35 @@ To build the emulator, navigate to the project directory and run:
 ```sh
 make
 ```
+### Running the Emulator
+
+After building the emulator, you can run it with the following command:
+
+```sh
+./um rpn.asm
+
+```
+
+Replace program.asm with the path to your assembly language program file.
+
+#### Assembly Language Format
+The assembly language supported by this emulator follows a simple format. Here's an example of a program:
+
+``` assembly
+; Sample program to add two numbers
+
+START
+    LOAD R1, #10      ; Load immediate value 10 into register R1
+    LOAD R2, #20      ; Load immediate value 20 into register R2
+    ADD R3, R1, R2    ; Add R1 and R2, store result in R3
+    HALT              ; Halt the CPU
+
+```
+
+
+### Contributing
+Feel free to contribute to this project by forking the repository, making improvements, and submitting pull requests.
+
+### License
+This project is licensed under the MIT License - see the LICENSE file for details.
+
